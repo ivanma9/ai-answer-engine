@@ -10,9 +10,12 @@
     "format:fix": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
     "groq-sdk": "^0.9.0",
     "next": "15.0.4",
-    "prettier": "^3.4.2",
+    "puppeteer": "^23.10.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -23,6 +26,7 @@
     "eslint": "^8",
     "eslint-config-next": "15.0.4",
     "postcss": "^8",
+    "prettier": "^3.4.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
