@@ -29,3 +29,35 @@ export async function getTextFromUrl(url) {
 // const url = "https://cheerio.js.org/docs/basics/loading";
 // // await scrapeUrl(url);
 // console.log(await getText(url));
+
+async function searchBrowser(message) {
+  const browser = await puppeteer.launch({
+    executablePath:
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary
+  });
+  const page = await browser.newPage();
+  const encoded_message = encodeURIComponent(message);
+  await page.goto("https://google.com/search?q=" + encoded_message);
+
+  // Search for the message
+  const links = await page.$$eval("a:has(br)", links =>
+    links.map((link, index) => {
+      const h3 = link.querySelector("h3"); // Select the first <h3> tag within the <a> tag
+      return {
+        url: link.href,
+        title: h3 ? h3.innerText : "", // Get the inner text of the <h3> if it exists
+        result_number: index,
+      };
+    })
+  );
+  console.log(links);
+  console.log(links.length);
+
+  await browser.close();
+}
+
+import fs from "fs";
+
+fs.writeFileSync("sample.md", "Your text here");
+
+searchBrowser("bfs");

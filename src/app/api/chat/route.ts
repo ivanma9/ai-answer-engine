@@ -4,15 +4,11 @@
 // Refer to the Cheerio docs here on how to parse HTML: https://cheerio.js.org/docs/basics/loading
 // Refer to Puppeteer docs here: https://pptr.dev/guides/what-is-puppeteer
 
-import Groq from "groq-sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import puppeteer from "puppeteer";
 import axios from "axios";
 import * as cheerio from "cheerio";
-
-const client = new Groq({
-  apiKey: process.env["GROQ_API_KEY"], // This is the default and can be omitted
-});
+import { marked } from "marked";
 
 function extractUrls(text: string): string[] {
   const urlRegex =
@@ -29,16 +25,49 @@ async function getTextFromUrl(url: string) {
     $("script").remove(); // Remove script tags
     return $.text().trim(); // Return the text content excluding script tags
   } catch (error) {
-    console.error(`Error fetching HTML: ${error}`);
+    console.error(`Error fetching HTML from ${url}: ${error}`);
+    return "";
   }
 }
 
-const apiKey = process.env["GEMINI_API_KEY"] as string;
-const genAI = new GoogleGenerativeAI(apiKey);
+async function getSummariesFromCache(urls: string[]) {
+  // Look for urls in cache
+  const cache: { [key: string]: string | undefined } = {};
+  // Map each URL to its content in the cache or fetch the content if not in the cache
+  const augmentedUrls = await Promise.all(
+    urls.map(async url => {
+      if (url in cache) {
+        // If the URL is in the cache, return its content
+        return { url, content: cache[url] };
+      } else {
+        // If the URL is not in the cache, fetch its content and update the cache
+        const text = await getTextFromUrl(url);
+        if (text === "") {
+          return { url, content: "Could not fetch content" };
+        }
+        const summarizedText = await summarizeText(text);
+        if (summarizedText) {
+          // TODO: Add the summarized text to the cache
+          cache[url] = text; // Update the cache with the new URL and its content
+          return { url, content: summarizedText };
+        }
+        return { url, content: "Could not fetch content" };
+      }
+    })
+  );
+  return augmentedUrls;
+}
+const genAI = new GoogleGenerativeAI(process.env["GEMINI_API_KEY"] || "");
 
 const summary_model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
   systemInstruction: "Summarize the text given to you\n",
+});
+
+const answer_model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash-exp",
+  systemInstruction:
+    "You are a helpful assistant that can help shape the context to URLs given to you. A list of urls and URL Contexts will be provided to you. You should use the context to answer the Question. Please include citations of sources in your response. You can do this with hyperlinks within the response to the question. You can also include a section at the end of your response with the sources you used to answer the question. Give your response in markdown format.",
 });
 
 const generationConfig = {
@@ -62,14 +91,37 @@ async function summarizeText(contentText: string | undefined) {
   return result.response.text();
 }
 
-async function visitUrl(url: string) {
-  const browser = await puppeteer.launch();
+async function responseFromModel(query: string | undefined) {
+  if (!query) {
+    return "";
+  }
+  const chatSession = answer_model.startChat({
+    generationConfig,
+    history: [],
+  });
+
+  const result = await chatSession.sendMessage(query);
+  return result.response.text();
+}
+
+async function searchBrowser(message: string) {
+  const browser = await puppeteer.launch({
+    executablePath:
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary
+  });
   const page = await browser.newPage();
-  await page.goto(url);
-  // const content = await page.content();
-  await page.screenshot({ path: "amazing.png" });
+  const encoded_message = encodeURIComponent(message);
+  await page.goto("https://google.com/search?q=" + encoded_message);
+
+  // Search for the message
+  const urls = await page.$$eval("a:has(br)", links =>
+    links.map(link => link.href)
+  );
+  console.log(urls);
+  console.log(urls.length);
+
   await browser.close();
-  // return content;
+  return urls;
 }
 
 export async function POST(req: Request) {
@@ -77,58 +129,28 @@ export async function POST(req: Request) {
     const res = await req.json();
     const { message } = res;
     console.log(message);
-    const urls = extractUrls(message);
-
-    // Look for urls in cache
-    const cache: { [key: string]: string | undefined } = {};
-
-    // Map each URL to its content in the cache or fetch the content if not in the cache
-    const augmentedUrls = await Promise.all(
-      urls.map(async url => {
-        if (url in cache) {
-          // If the URL is in the cache, return its content
-          return { url, content: cache[url] };
-        } else {
-          // If the URL is not in the cache, fetch its content and update the cache
-          const text = await getTextFromUrl(url);
-          const summarized = await summarizeText(text);
-          if (text) {
-            cache[url] = text; // Update the cache with the new URL and its content
-            return { url, content: text };
-          }
-          return { url, content: "Could not fetch content" };
-        }
-      })
-    );
+    const initialUrls = extractUrls(message);
+    const urls =
+      initialUrls.length > 0 ? initialUrls : await searchBrowser(message);
 
     // Create a context string from the URL contents
-    const urlContexts = augmentedUrls
+    const urlContexts = (await getSummariesFromCache(urls))
       .map(
-        (urlData: { url: any; content: any }) =>
-          `URL: ${urlData.url}\nContent: ${urlData.content}`
+        (urlData: { url: string; content: string | undefined }) =>
+          `URL: ${urlData.url}\nContent: ${urlData.content || "No content available"}`
       )
       .join("\n\n");
 
     // Combine the original message with URL contexts
-    const augmentedMessage = `${message}\n\n--- URL Contexts ---\n${urlContexts}`;
+    const augmentedMessage = `---Question---\n${message}\n\n--- URL Contexts ---\n${urlContexts}`;
 
-    const params: Groq.Chat.CompletionCreateParams = {
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful assistant that can help provide context to URLs given to you. If a question is asked, you should provide an answer with sources cited. Please include the URL in your response and explain the context of the URL from the user. A list of URLs is provided to you to help you understand the context of the user's question or to just research the user's question. If a URL is provided, you should visit the url and understand the context of this page. You should provide an answer about the context of the URLs.",
-        },
-        { role: "user", content: augmentedMessage },
-      ],
-      model: "llama3-70b-8192",
-    };
+    console.log(augmentedMessage);
 
-    const chatCompletion: Groq.Chat.ChatCompletion =
-      await client.chat.completions.create(params);
+    const answer_model_response = await responseFromModel(augmentedMessage);
+    console.log(answer_model_response);
 
     return Response.json({
-      response: chatCompletion.choices[0].message.content,
+      response: answer_model_response,
     });
   } catch (error) {
     console.error(error);

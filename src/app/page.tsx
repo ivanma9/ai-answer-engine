@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 type Message = {
   role: "user" | "ai";
@@ -33,8 +35,9 @@ export default function Home() {
       });
 
       const data = await response.json();
-      // TODO: Handle the response from the chat API to display the AI response in the UI
-      const aiMessage = { role: "ai" as const, content: data.response };
+
+      const formattedResponse = marked(data.response);
+      const aiMessage = { role: "ai" as const, content: formattedResponse };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error("Error:", error);
@@ -73,7 +76,15 @@ export default function Home() {
                     : "bg-cyan-600 text-white ml-auto"
                 }`}
               >
-                {msg.content}
+                {msg.role === "ai" ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(msg.content),
+                    }}
+                  />
+                ) : (
+                  <div>{msg.content}</div>
+                )}
               </div>
             </div>
           ))}
