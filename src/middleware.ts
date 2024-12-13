@@ -8,17 +8,16 @@ import { ratelimit } from "@/app/utils/ratelimiter";
 
 export async function middleware(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-  const { success, pending, limit, reset, remaining } =
-    await ratelimit.limit(ip);
+  console.log(ip);
+  const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
-  if (!success) {
-    console.log("limit", limit);
-    console.log("reset", reset);
-    console.log("remaining", remaining);
-    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-  }
+  const response = success
+    ? NextResponse.next()
+    : NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
 
-  const response = NextResponse.next();
+  response.headers.set("X-RateLimit-Limit", limit.toString());
+  response.headers.set("X-RateLimit-Reset", reset.toString());
+  response.headers.set("X-RateLimit-Remaining", remaining.toString());
 
   return response;
 }

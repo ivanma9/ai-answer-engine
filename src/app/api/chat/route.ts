@@ -4,7 +4,7 @@
 // Refer to the Cheerio docs here on how to parse HTML: https://cheerio.js.org/docs/basics/loading
 // Refer to Puppeteer docs here: https://pptr.dev/guides/what-is-puppeteer
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import puppeteer from "puppeteer";
 import axios from "axios";
 import * as cheerio from "cheerio";
@@ -64,6 +64,11 @@ const summary_model = genAI.getGenerativeModel({
   systemInstruction: "Summarize the text given to you\n",
 });
 
+const simple_answer_model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash-exp",
+  systemInstruction: "Answer the question given to you\n",
+});
+
 const answer_model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
   systemInstruction:
@@ -91,11 +96,14 @@ async function summarizeText(contentText: string | undefined) {
   return result.response.text();
 }
 
-async function responseFromModel(query: string | undefined) {
+async function responseFromModel(
+  model: GenerativeModel,
+  query: string | undefined
+) {
   if (!query) {
     return "";
   }
-  const chatSession = answer_model.startChat({
+  const chatSession = model.startChat({
     generationConfig,
     history: [],
   });
@@ -130,6 +138,21 @@ export async function POST(req: Request) {
     const { message } = res;
     console.log(message);
     const initialUrls = extractUrls(message);
+    if (initialUrls.length === 0) {
+      const isSimpleRequest = message.split(" ").length <= 5;
+      if (isSimpleRequest) {
+        console.log("This is a simple request.");
+        const answer_model_response = await responseFromModel(
+          simple_answer_model,
+          message
+        );
+        return Response.json({
+          response: answer_model_response,
+        });
+      } else {
+        console.log("This query needs additional context.");
+      }
+    }
     const urls =
       initialUrls.length > 0 ? initialUrls : await searchBrowser(message);
 
@@ -146,7 +169,10 @@ export async function POST(req: Request) {
 
     console.log(augmentedMessage);
 
-    const answer_model_response = await responseFromModel(augmentedMessage);
+    const answer_model_response = await responseFromModel(
+      answer_model,
+      augmentedMessage
+    );
     console.log(answer_model_response);
 
     return Response.json({
