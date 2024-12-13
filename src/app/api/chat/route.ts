@@ -9,6 +9,7 @@ import puppeteer from "puppeteer";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { marked } from "marked";
+import { URLCache } from "@/app/utils/cache";
 
 function extractUrls(text: string): string[] {
   const urlRegex =
@@ -31,31 +32,33 @@ async function getTextFromUrl(url: string) {
 }
 
 async function getSummariesFromCache(urls: string[]) {
-  // Look for urls in cache
-  const cache: { [key: string]: string | undefined } = {};
-  // Map each URL to its content in the cache or fetch the content if not in the cache
   const augmentedUrls = await Promise.all(
     urls.map(async url => {
-      if (url in cache) {
-        // If the URL is in the cache, return its content
-        return { url, content: cache[url] };
-      } else {
-        // If the URL is not in the cache, fetch its content and update the cache
-        const text = await getTextFromUrl(url);
-        if (text === "") {
-          return { url, content: "Could not fetch content" };
-        }
-        const summarizedText = await summarizeText(text);
-        if (summarizedText) {
-          // TODO: Add the summarized text to the cache
-          cache[url] = text; // Update the cache with the new URL and its content
-          return { url, content: summarizedText };
-        }
+      // Try to get from cache first
+      const cached = await URLCache.get(url);
+      if (cached) {
+        return { url, content: cached };
+      }
+
+      // If not in cache, fetch and cache
+      const text = await getTextFromUrl(url);
+      if (text === "") {
         return { url, content: "Could not fetch content" };
       }
+
+      const summarizedText = await summarizeText(text);
+      if (summarizedText) {
+        // Store in cache
+        await URLCache.set(url, summarizedText);
+        return { url, content: summarizedText };
+      }
+
+      return { url, content: "Could not fetch content" };
     })
   );
-  return augmentedUrls;
+  return augmentedUrls.filter(
+    urlData => urlData.content !== "Could not fetch content"
+  );
 }
 const genAI = new GoogleGenerativeAI(process.env["GEMINI_API_KEY"] || "");
 
@@ -72,7 +75,7 @@ const simple_answer_model = genAI.getGenerativeModel({
 const answer_model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
   systemInstruction:
-    "You are a helpful assistant that can help shape the context to URLs given to you. A list of urls and URL Contexts will be provided to you. You should use the context to answer the Question. Please include citations of sources in your response. You can do this with hyperlinks within the response to the question. You can also include a section at the end of your response with the sources you used to answer the question. Give your response in markdown format.",
+    "You are a helpful assistant that can help shape the context to URLs given to you. A list of urls and URL Contexts will be provided to you. You should use the context to answer the Question. Please include citations of sources in your response. You can do this with hyperlinks within the response to the question. Do not include the URL in the body of the response, only use hyperlinks within the body of the response. The hyperlinks can be referenced in the sources section at the end of your response. You can also include a section at the end of your response with the sources you used to answer the question. Give your response in markdown format.",
 });
 
 const generationConfig = {
