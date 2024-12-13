@@ -19,3 +19,55 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Styles for Markdown content */
+.contentMessage {
+  line-height: 1.5; /* Improve readability */
+  color: var(--foreground); /* Use the foreground color */
+}
+
+/* Headings */
+.contentMessage h1,
+.contentMessage h2,
+.contentMessage h3,
+.contentMessage h4,
+.contentMessage h5,
+.contentMessage h6 {
+  margin: 1em 0; /* Add spacing around headings */
+  font-weight: bold; /* Make headings bold */
+}
+
+/* Lists */
+.contentMessage ul,
+.contentMessage ol {
+  margin: 1em 0; /* Add spacing around lists */
+  padding-left: 20px; /* Indent lists */
+}
+
+/* List items */
+.contentMessage li {
+  margin-bottom: 0.5em; /* Add spacing between list items */
+}
+
+/* Blockquotes */
+.contentMessage blockquote {
+  border-left: 4px solid #ccc; /* Add a left border */
+  padding-left: 1em; /* Indent blockquotes */
+  color: #aaa; /* Change text color for blockquotes */
+  margin: 1em 0; /* Add spacing around blockquotes */
+}
+
+/* Code blocks */
+.contentMessage pre {
+  background-color: #2e2e2e; /* Background color for code blocks */
+  padding: 1em; /* Add padding */
+  border-radius: 5px; /* Rounded corners */
+  overflow-x: auto; /* Allow horizontal scrolling */
+}
+
+/* Inline code */
+.contentMessage code {
+  background-color: #444; /* Background color for inline code */
+  padding: 0.2em 0.4em; /* Add padding */
+  border-radius: 3px; /* Rounded corners */
+}

@@ -87,12 +87,14 @@ async function summarizeText(contentText: string | undefined) {
   if (!contentText) {
     return "";
   }
+  console.log("Starting summarization process...");
   const chatSession = summary_model.startChat({
     generationConfig,
     history: [],
   });
 
   const result = await chatSession.sendMessage(contentText);
+  console.log("Summarization completed.");
   return result.response.text();
 }
 
@@ -103,12 +105,14 @@ async function responseFromModel(
   if (!query) {
     return "";
   }
+  console.log(`Processing query: ${query}`);
   const chatSession = model.startChat({
     generationConfig,
     history: [],
   });
 
   const result = await chatSession.sendMessage(query);
+  console.log("Model response received.");
   return result.response.text();
 }
 

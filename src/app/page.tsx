@@ -36,10 +36,15 @@ export default function Home() {
 
       const data = await response.json();
 
-      const formattedResponse = marked(data.response);
+      const formattedResponse = await marked(data.response);
       const aiMessage = { role: "ai" as const, content: formattedResponse };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
+      const aiMessage = {
+        role: "ai" as const,
+        content: "Error fetching from ai model",
+      };
+      setMessages(prev => [...prev, aiMessage]);
       console.error("Error:", error);
     } finally {
       setIsLoading(false);
@@ -76,15 +81,15 @@ export default function Home() {
                     : "bg-cyan-600 text-white ml-auto"
                 }`}
               >
-                {msg.role === "ai" ? (
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(msg.content),
-                    }}
-                  />
-                ) : (
-                  <div>{msg.content}</div>
-                )}
+                <div
+                  className="contentMessage"
+                  // Set innerHTML only for AI messages
+                  dangerouslySetInnerHTML={
+                    msg.role === "ai" ? { __html: msg.content } : undefined
+                  }
+                >
+                  {msg.role === "user" ? msg.content : null}
+                </div>{" "}
               </div>
             </div>
           ))}
