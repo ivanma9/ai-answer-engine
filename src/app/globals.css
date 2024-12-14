@@ -71,3 +71,14 @@ body {
   padding: 0.2em 0.4em; /* Add padding */
   border-radius: 3px; /* Rounded corners */
 }
+
+/* Hyperlinks */
+.contentMessage a {
+  color: #3686d1; /* Set link color */
+  text-decoration: none; /* Remove underline */
+}
+
+.contentMessage a:hover {
+  text-decoration: underline; /* Underline on hover */
+  color: #1a0dab; /* Change color on hover */
+}

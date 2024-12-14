@@ -74,7 +74,7 @@ const simple_answer_model = genAI.getGenerativeModel({
 const answer_model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
   systemInstruction:
-    "You are a helpful assistant that can help shape the context to URLs given to you. A list of urls and URL Contexts will be provided to you. You should use the context to answer the Question. Please include citations of sources in your response. You can do this with hyperlinks within the response to the question. Do not include the URL in the body of the response, only use hyperlinks within the body of the response. The hyperlinks can be referenced in the sources section at the end of your response. You can also include a section at the end of your response with the sources you used to answer the question. Give your response in markdown format.",
+    "You are a helpful assistant that can help shape the context to URLs given to you. A list of urls and URL Contexts will be provided to you. You should use the context to answer the Question. Please include citations of sources in your response. You can do this with highlighted hyperlinks within the response to the question. Do not include the URL in the body of the response, only use highlighted hyperlinks within the body of the response. The highlighted hyperlinks can be referenced in the sources section at the end of your response. You can also include a section at the end of your response with the sources you used to answer the question. Give your response in markdown format. Make sure the hyperlinks are highlighted and are clickable.",
 });
 
 const generationConfig = {
@@ -119,11 +119,12 @@ async function responseFromModel(
 }
 
 async function searchBrowser(message: string) {
-  const browser = await puppeteer
-    .launch
-    // {executablePath:
-    //   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary}
-    ();
+  // For dev purposes, use the following path
+  // const browser = await puppeteer.launch({
+  //   executablePath:
+  //     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary
+  // });
+  const browser = await puppeteer.launch();
   const page = await browser.newPage();
   const encoded_message = encodeURIComponent(message);
   await page.goto("https://google.com/search?q=" + encoded_message);
@@ -132,11 +133,9 @@ async function searchBrowser(message: string) {
   const urls = await page.$$eval("a:has(br)", links =>
     links.map(link => link.href)
   );
-  console.log(urls);
-  console.log(urls.length);
 
   await browser.close();
-  return urls;
+  return urls.slice(0, 5);
 }
 
 export async function POST(req: Request) {
