@@ -119,10 +119,11 @@ async function responseFromModel(
 }
 
 async function searchBrowser(message: string) {
-  const browser = await puppeteer.launch({
-    executablePath:
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary
-  });
+  const browser = await puppeteer
+    .launch
+    // {executablePath:
+    //   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary}
+    ();
   const page = await browser.newPage();
   const encoded_message = encodeURIComponent(message);
   await page.goto("https://google.com/search?q=" + encoded_message);
