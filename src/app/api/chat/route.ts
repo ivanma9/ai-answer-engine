@@ -5,10 +5,11 @@
 // Refer to Puppeteer docs here: https://pptr.dev/guides/what-is-puppeteer
 
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { URLCache } from "@/app/utils/cache";
+import chromium from "@sparticuz/chromium-min";
 
 function extractUrls(text: string): string[] {
   const urlRegex =
@@ -124,7 +125,15 @@ async function searchBrowser(message: string) {
   //   executablePath:
   //     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Adjust the path if necessary
   // });
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(
+      `https://github.com/Sparticuz/chromium/releases/download/v123.0.1/chromium-v123.0.1-pack.tar`
+    ),
+    headless: chromium.headless,
+    ignoreHTTPSErrors: true,
+  });
   const page = await browser.newPage();
   const encoded_message = encodeURIComponent(message);
   await page.goto("https://google.com/search?q=" + encoded_message);

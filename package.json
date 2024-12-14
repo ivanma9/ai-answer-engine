@@ -7,19 +7,23 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format:fix": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+    "format:fix": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "postinstall": "npx puppeteer browsers install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "@sparticuz/chromium-min": "^131.0.1",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.34.3",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0",
+    "chromium": "^3.0.3",
     "dompurify": "^3.2.3",
     "groq-sdk": "^0.9.0",
     "marked": "^15.0.3",
     "next": "15.0.4",
-    "puppeteer": "^23.10.3",
+    "puppeteer": "^23.10.4",
+    "puppeteer-core": "^23.10.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
