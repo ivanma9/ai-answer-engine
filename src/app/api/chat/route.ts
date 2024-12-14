@@ -132,7 +132,6 @@ async function searchBrowser(message: string) {
       `https://github.com/Sparticuz/chromium/releases/download/v123.0.1/chromium-v123.0.1-pack.tar`
     ),
     headless: chromium.headless,
-    ignoreHTTPSErrors: true,
   });
   const page = await browser.newPage();
   const encoded_message = encodeURIComponent(message);
