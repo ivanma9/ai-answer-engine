@@ -8,7 +8,6 @@ import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import puppeteer from "puppeteer";
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { marked } from "marked";
 import { URLCache } from "@/app/utils/cache";
 
 function extractUrls(text: string): string[] {
